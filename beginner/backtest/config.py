@@ -5,3 +5,5 @@ periods_per_year = 252 # daily
 short = 20
 long = 50
 cost_per_trade = 0.001
+
+fig_size = (16, 9)

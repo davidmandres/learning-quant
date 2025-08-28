@@ -1,20 +1,16 @@
 import matplotlib as mpl
 import yfinance as yf
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 
 import sys
 
-from typing import Optional
-from matplotlib.colors import to_rgba
-
-from config import tickers, short, long, cost_per_trade
-from functions import get_risk, make_plot, add_values_to_bar_plot 
+from config import tickers, short, long, cost_per_trade, fig_size
+from functions import get_risk, make_plot, make_bar_plot 
 
 # Step 0: Get price data
 data = yf.download(tickers=tickers, start="2020-08-24", end="2025-08-24")
 
+assert data is not None, "Failed to retrieve data"
 prices = data["Close"]
 
 # Strategy
@@ -44,7 +40,7 @@ mpl.rcParams['font.family'] = 'serif'
 cmap = plt.get_cmap("tab10", len(tickers))
 colors = {ticker: cmap(i) for i, ticker in enumerate(tickers)}
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=fig_size)
 make_plot(colors, data1=prices, data2=None, comparison=False)
 plt.title("Stock Prices")
 plt.xlabel("Date")
@@ -52,7 +48,7 @@ plt.ylabel("Price ($)")
 plt.legend()
 plt.grid(True)
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=fig_size)
 make_plot(colors, b_cum_returns, s_cum_returns)
 plt.title("Cumulative Returns")
 plt.xlabel("Date")
@@ -60,38 +56,28 @@ plt.ylabel("Portfolio Value")
 plt.legend()
 plt.grid(True)
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=fig_size)
 make_plot(colors, b_risk["drawdown"], s_risk["drawdown"])
-plt.title("Cumulative Returns")
+plt.title("Drawdown of tickers")
 plt.xlabel("Date")
-plt.ylabel("Portfolio Value")
+plt.ylabel("Drawdown")
 plt.legend()
 plt.grid(True)
 
-plt.figure(figsize=(12, 6))
-sharpe_ratio_bars_s = plt.bar(
-    s_risk["sharpe"].index,
-    s_risk["sharpe"].values,
-    color=[colors[ticker] for ticker in tickers]
-)
+plt.figure(figsize=fig_size)
+make_bar_plot(s_risk["sharpe"], colors)
 plt.title(f"{tickers} Sharpe ratios, strategy (2020–2025)")
 plt.xticks([])
 plt.ylabel("Sharpe ratio")
 plt.legend()
 plt.grid(True)
-add_values_to_bar_plot(sharpe_ratio_bars_s, s_risk["sharpe"])
 
-plt.figure(figsize=(12, 6))
-sharpe_ratio_bars_b = plt.bar(
-    b_risk["sharpe"].index,
-    b_risk["sharpe"].values,
-    color=[colors[ticker] for ticker in tickers]
-)
+plt.figure(figsize=fig_size)
+make_bar_plot(b_risk["sharpe"], colors)
 plt.title(f"{tickers} Sharpe ratios, benchmark (2020–2025)")
 plt.xticks([])
 plt.ylabel("Sharpe ratio")
 plt.legend()
 plt.grid(True)
-add_values_to_bar_plot(sharpe_ratio_bars_b, b_risk["sharpe"])
 
 plt.show()

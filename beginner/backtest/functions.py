@@ -31,11 +31,17 @@ def make_plot(colors, data1: pd.Series, data2: Optional[pd.Series], comparison =
         plt.plot(data1.index, data1[ticker], label=label, color=colors[ticker], linestyle="--")
 
         if comparison:
-            # assert data2 != None, "data2 has a value if comparison is true" 
+            assert data2 is not None, "data2 has a value if comparison is true" 
             plt.plot(data2.index, data2[ticker], label=f"{ticker} Strategy", color=to_rgba(colors[ticker], alpha=0.5), linestyle="-")
 
-def add_values_to_bar_plot(bars, data):
+def make_bar_plot(data, colors):
+    bars = plt.bar(
+    data.index,
+    data.values,
+    color=[colors[ticker] for ticker in data.keys()]
+)
     for bar, ticker in zip(bars, data.index):
       yval = bar.get_height()
       plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.02 if yval > 0 else yval - 0.3, f"{data[ticker]:.2f}", 
               ha='center', va='bottom', fontsize=8)
+    
