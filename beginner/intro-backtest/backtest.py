@@ -80,4 +80,12 @@ plt.ylabel("Sharpe ratio")
 plt.legend()
 plt.grid(True)
 
+plt.figure(figsize=fig_size)
+make_bar_plot(s_risk["hit_ratio"], colors)
+plt.title(f"{tickers} Hit ratios, strategy (2020–2025)")
+plt.xticks([])
+plt.ylabel("Sharpe ratio")
+plt.legend()
+plt.grid(True)
+
 plt.show()
