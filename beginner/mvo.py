@@ -3,17 +3,23 @@ import numpy as np
 import yfinance as yf
 from scipy.optimize import minimize
 
+import matplotlib as mpl
+from matplotlib import pyplot as plt
+
 N = DAILY = 252
 r_f = 0.01
 r_prem = 0.06
 
 
-EQUITY_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "SPY"]
+EQUITY_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
 # RF_TICKER = "IEF"  # 7-10 year treasury ETF as a proxy for risk-free asset
-TICKERS = EQUITY_TICKERS + ["RF"]
+MARKET_TICKER = "SPY"
+
+TICKERS = EQUITY_TICKERS + [MARKET_TICKER]
+TICKERS_WITH_RF = EQUITY_TICKERS + ["RF"]
 
 # mean-variance optimization (MVO) example
-data = yf.download(tickers=EQUITY_TICKERS, period="1y", interval="1d")
+data = yf.download(tickers=TICKERS, period="1y", interval="1d")
 prices = data['Close']
 
 # calculate daily returns, annualized returns and volatilities
@@ -22,18 +28,18 @@ daily_std = daily_returns.std()
 annualized_returns = daily_returns.mean() * DAILY
 annualized_std = daily_std * np.sqrt(DAILY)
 
-# covariance stuff
+# CAPM expected returns
 cov_matrix = daily_returns.cov() * DAILY
+ticker_betas = cov_matrix["SPY"] / cov_matrix.loc["SPY", "SPY"]
+cov_matrix = cov_matrix.drop(columns=["SPY"], index=["SPY"])  # remove market from covariance matrix
 cov_matrix_rf = cov_matrix.copy()
 cov_matrix_rf["RF"] = 0.0
 cov_matrix_rf.loc["RF"] = 0.0
-
-# CAPM expected returns
-ticker_betas = cov_matrix["SPY"] / cov_matrix.loc["SPY", "SPY"]
 capm_returns = r_f + ticker_betas * r_prem
 
 # simplified black-litterman expected returns, take the calculated (from the prices) expected returns and the capm returns, with equal weights
 bl_expected_returns = 0.5 * (annualized_returns + capm_returns)
+bl_expected_returns = bl_expected_returns[EQUITY_TICKERS]  # only equities
 bl_expected_returns_rf = bl_expected_returns.copy()
 bl_expected_returns_rf["RF"] = r_f  # risk-free asset expected return
 
@@ -69,7 +75,7 @@ def maximize_stat(stat_fun, assets = EQUITY_TICKERS, cov_matrix=cov_matrix, bl_e
             {'type': 'eq', 'fun': lambda x: portfolio_volatility(x, cov_matrix) - target_volatility}
         )
 
-    bounds = tuple((0.1, 0.9) for _ in range(num_assets)) # no more than 90% in one asset, at least 10%
+    bounds = tuple((-0.9, 0.9) for _ in range(num_assets)) # no more than 90% in one asset, shorting allowed
 
     # initial guess is equal weights
     initial_guess = np.array([1 / num_assets] * num_assets)
@@ -96,9 +102,57 @@ tangency_portfolio_stats = portfolio_stats(tangency_portfolio_weights)
 print("Tangency Portfolio Stats:")
 print(tangency_portfolio_stats)
 
-tangency_rf_portfolio_weights = maximize_stat(sharpe_ratio, assets=TICKERS, cov_matrix=cov_matrix_rf, bl_expected_returns=bl_expected_returns_rf)
+tangency_rf_portfolio_weights = maximize_stat(sharpe_ratio, assets=TICKERS_WITH_RF, cov_matrix=cov_matrix_rf, bl_expected_returns=bl_expected_returns_rf)
 tangency_rf_portfolio_stats = portfolio_stats(tangency_rf_portfolio_weights, bl_expected_returns=bl_expected_returns_rf, cov_matrix=cov_matrix_rf)
 
 print("Tangency Portfolio with RF Stats:")
 print(tangency_rf_portfolio_stats)
 
+# Plotting the efficient frontier
+target_volatilities = np.linspace(0.1 * equal_portfolio_stats["Volatility"], 1.5 * equal_portfolio_stats["Volatility"], 50)
+target_returns = []
+
+for vol in target_volatilities:
+    weights = maximize_stat(portfolio_return, target_volatility=vol)
+    ret = portfolio_return(weights)
+    target_returns.append(ret)
+
+plt.style.use("dark_background")
+mpl.rcParams['font.family'] = 'serif'
+
+_, axes = plt.subplots(2, 2, figsize=(18, 9))
+
+# 1. Efficient frontier plot
+axes[0, 0].plot(target_volatilities, target_returns, label='Efficient Frontier', color='blue')
+axes[0, 0].scatter(equal_portfolio_stats["Volatility"], equal_portfolio_stats["E(R)"], color='red', label='Equal Weight Portfolio')
+axes[0, 0].scatter(optimized_portfolio_stats["Volatility"], optimized_portfolio_stats["E(R)"], color='green', label='Optimized Portfolio')
+axes[0, 0].scatter(tangency_portfolio_stats["Volatility"], tangency_portfolio_stats["E(R)"], color='purple', label='Tangency Portfolio')
+axes[0, 0].scatter(tangency_rf_portfolio_stats["Volatility"], tangency_rf_portfolio_stats["E(R)"], color='orange', label='Tangency Portfolio with RF')
+axes[0, 0].set_xlabel('Volatility')
+axes[0, 0].set_ylabel('Expected Return')
+axes[0, 0].set_title('Efficient Frontier and Portfolios')
+axes[0, 0].legend()
+axes[0, 0].grid(True)
+
+# 2. Optimized portfolio weights bar chart
+axes[0, 1].bar(optimized_weights.index, optimized_weights.values, color='cyan', edgecolor='black')
+axes[0, 1].set_title('Optimized Portfolio Weights')
+axes[0, 1].set_ylabel('Weight')
+axes[0, 1].set_xticklabels(optimized_weights.index, rotation=45)
+axes[0, 1].grid(True)
+
+# 3. Tangency portfolio weights bar chart
+axes[1, 0].bar(tangency_portfolio_weights.index, tangency_portfolio_weights.values, color='magenta', edgecolor='black')
+axes[1, 0].set_title('Tangency Portfolio Weights')
+axes[1, 0].set_ylabel('Weight')
+axes[1, 0].set_xticklabels(tangency_portfolio_weights.index, rotation=45)
+axes[1, 0].grid(True)
+
+# 4. Tangency portfolio with RF weights bar chart
+axes[1, 1].bar(tangency_rf_portfolio_weights.index, tangency_rf_portfolio_weights.values, color='yellow', edgecolor='black')
+axes[1, 1].set_title('Tangency Portfolio with RF Weights')
+axes[1, 1].set_ylabel('Weight')
+axes[1, 1].set_xticklabels(tangency_rf_portfolio_weights.index, rotation=45)
+axes[1, 1].grid(True)
+
+plt.show()
