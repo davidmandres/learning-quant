@@ -38,7 +38,7 @@ work underpinning the other projects.
 
 **Files:** `gbm.py`
 
-### 🪙 Coinflip (`/coinflip`)
+### 👛 Coinflip (`/coinflip`)
 
 Small probability simulation exploring convergence and law of large numbers concepts.
 
