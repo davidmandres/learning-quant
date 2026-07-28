@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-from helpers import bar_chart_nums
+from utils.helpers import bar_chart_nums
 
 N = DAILY = 252
 r_f = 0.01
@@ -60,7 +60,7 @@ def sharpe_ratio(weights, bl_expected_returns=bl_expected_returns, cov_matrix=co
 def portfolio_stats(weights, bl_expected_returns=bl_expected_returns, cov_matrix=cov_matrix):
         port_return = portfolio_return(weights, bl_expected_returns)
         port_volatility = portfolio_volatility(weights, cov_matrix)
-        port_sharpe = sharpe_ratio(weights, bl_expected_returns, cov_matrix)
+        port_sharpe = (port_return - r_f) / port_volatility
         index = ["Weights", "E(R)", "Volatility", "Sharpe Ratio"]
         return pd.Series([weights, port_return, port_volatility, port_sharpe], index=index)
 
@@ -99,7 +99,7 @@ tangency_portfolio_stats = portfolio_stats(tangency_portfolio_weights)
 tangency_rf_portfolio_weights = maximize_stat(sharpe_ratio, assets=TICKERS_WITH_RF, cov_matrix=cov_matrix_rf, bl_expected_returns=bl_expected_returns_rf)
 tangency_rf_portfolio_stats = portfolio_stats(tangency_rf_portfolio_weights, bl_expected_returns=bl_expected_returns_rf, cov_matrix=cov_matrix_rf)
 
-# Plotting the efficient frontier
+# plotting the efficient frontier
 target_volatilities = np.linspace(0.1 * equal_portfolio_stats["Volatility"], 1.5 * equal_portfolio_stats["Volatility"], 50)
 target_returns = []
 
@@ -119,7 +119,13 @@ axes[0, 0].scatter(equal_portfolio_stats["Volatility"], equal_portfolio_stats["E
 axes[0, 0].scatter(optimized_portfolio_stats["Volatility"], optimized_portfolio_stats["E(R)"], color='green', label='Optimized Portfolio')
 axes[0, 0].scatter(tangency_portfolio_stats["Volatility"], tangency_portfolio_stats["E(R)"], color='purple', label='Tangency Portfolio')
 axes[0, 0].scatter(tangency_rf_portfolio_stats["Volatility"], tangency_rf_portfolio_stats["E(R)"], color='orange', label='Tangency Portfolio with RF')
-# Get the coordinates of your two points
+
+print(f"Equal Weight Portfolio Sharpe Ratio: {equal_portfolio_stats['Sharpe Ratio']:.4f}")
+print(f"Optimized Portfolio Sharpe Ratio: {optimized_portfolio_stats['Sharpe Ratio']:.4f}")
+print(f"Tangency Portfolio Sharpe Ratio: {tangency_portfolio_stats['Sharpe Ratio']:.4f}")
+print(f"Tangency Portfolio with RF Sharpe Ratio: {tangency_rf_portfolio_stats['Sharpe Ratio']:.4f}")
+
+# Get the coords of two points
 x1 = tangency_portfolio_stats["Volatility"]
 y1 = tangency_portfolio_stats["E(R)"]
 x2 = tangency_rf_portfolio_stats["Volatility"]
@@ -128,8 +134,8 @@ y2 = tangency_rf_portfolio_stats["E(R)"]
 # Calculate the slope
 slope = (y2 - y1) / (x2 - x1)
 
-# Define how far you want to extend the line
-# You can use the axis limits or set specific values
+# Define how far we want to extend the line
+# we can use the axis limits or set specific values
 x_min = 0  # or axes[0, 0].get_xlim()[0]
 x_max = axes[0, 0].get_xlim()[1]  # or a specific value like 0.5
 

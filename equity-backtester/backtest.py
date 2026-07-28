@@ -80,6 +80,8 @@ plt.ylabel("Sharpe ratio")
 plt.legend()
 plt.grid(True)
 
+print(f"Ratio of strategy to benchmark average Sharpe ratios: {s_risk['sharpe'].mean() / b_risk['sharpe'].mean()}")
+
 plt.figure(figsize=fig_size)
 make_bar_plot(s_risk["hit_ratio"], colors)
 plt.title(f"{tickers} Hit ratios, strategy (2020–2025)")
