@@ -8,6 +8,8 @@ from matplotlib import pyplot as plt
 
 from utils.helpers import bar_chart_nums
 
+# run with python -m mvo.mvo in the learning-quant directory
+
 N = DAILY = 252
 r_f = 0.01
 r_prem = 0.06
